@@ -1,7 +1,7 @@
 # NOTAM Mapper
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/johnathanfernandes/NOTAM_mapper/pic.jpg"/>
+<img src="https://github.com/johnathanfernandes/NOTAM_mapper/blob/main/pic.jpg?raw=true"/>
 </p>
 
 <p align="center">
