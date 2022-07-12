@@ -11,6 +11,8 @@
 
 <a href="https://share.streamlit.io/johnathanfernandes/notam_mapper">
 <img src="https://img.shields.io/badge/Streamlit-Click here!-red?style=for-the-badge&logo=streamlit" alt="Streamlit link Badge">
+</a>
+
 </p>
 
 Python app to generate a map from a NOTAM file. Hosted on Streamlit / Google Colab
