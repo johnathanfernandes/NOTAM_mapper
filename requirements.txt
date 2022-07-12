@@ -1,2 +1,4 @@
-folium == 0.12.1.post1
-pandas == 1.4.1
+folium==0.12.1.post1
+pandas==1.4.1
+streamlit==1.10.0
+streamlit_folium==0.6.14
