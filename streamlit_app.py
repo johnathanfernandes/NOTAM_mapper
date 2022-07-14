@@ -3,19 +3,27 @@
 Generate interactive maps from notice to airman (NOTAM) documents
 """
 
-import streamlit as st # Web app
+import streamlit as st  # Web app
 import folium  # Display map
 import pandas as pd  # Data manipulation
 import re  # Text searching via regular expressions
-from streamlit_folium import st_folium # Integrate maps with web apps
+from streamlit_folium import st_folium  # Integrate maps with web apps
+import simplekml  # .kml file generator
+from polycircles import polycircles  # .kml file circle generator
 
-st.title('NOTAM Mapper')
+st.set_page_config(
+     page_title="Automatic mapper"
+ )
+
+st.title("NOTAM Mapper")
 st.write("Built with ☕ by [Johnathan Fernandes](johnathanfernandes.github.io/)")
 
 rawtext = st.text_area("Paste NOTAM below:", height=400)
 
-while len(rawtext)!=0: # User input check
-    
+kml = simplekml.Kml()  # Initialize kml
+
+while len(rawtext) != 0:  # User input check
+
     data = rawtext.replace("\n", " ")  # Join lines
     data = data.replace("  ", " ")  # Remove multiple spaces
 
@@ -31,8 +39,10 @@ while len(rawtext)!=0: # User input check
     circles = pd.DataFrame(re.findall(circle_text, data))  # Circles
     polygons = pd.DataFrame(re.findall(poly_text, data))  # Polygons
 
-    if (len(circles)+len(polygons) == 0):
-        st.write("No events found. Exiting. Please raise an [issue on the github page](https://github.com/johnathanfernandes/NOTAM_mapper/issues) with your NOTAM")
+    if len(circles) + len(polygons) == 0:
+        st.write(
+            "No events found. Exiting. Please raise an [issue on the github page](https://github.com/johnathanfernandes/NOTAM_mapper/issues) with your NOTAM"
+        )
         quit()
 
     def process_circles(circle):
@@ -94,12 +104,10 @@ while len(rawtext)!=0: # User input check
         circle_list = circles.apply(process_circles, axis=1, result_type="expand")
         circle_list.columns = ["Event name", "Latitude", "Longitude", "Radius (m)"]
 
-
     if len(polygons) != 0:
         polygons = polygons.iloc[:, 0:2]
         polygon_list = polygons.apply(process_polygons, axis=1, result_type="expand")
         polygon_list.columns = ["Event name", "Locations"]
-
 
     # Define mapping function
     def create_map():
@@ -110,7 +118,7 @@ while len(rawtext)!=0: # User input check
                     circle_list["Longitude"].median(),
                 ]
             )  # Try to center around median of circles
-        except (ValueError,NameError):
+        except (ValueError, NameError):
             AIO_map = folium.Map(
                 location=[
                     polygon_list["Locations"][0][1][
@@ -138,6 +146,21 @@ while len(rawtext)!=0: # User input check
                         % circle["Event name"],
                     ),
                 ).add_to(AIO_map)
+                polycircle = polycircles.Polycircle(
+                    latitude=circle["Latitude"],
+                    longitude=circle["Longitude"],
+                    radius=circle["Radius (m)"],
+                    number_of_vertices=round(circle["Radius (m)"] / 2) + 1,
+                )
+
+                pol = kml.newpolygon(
+                    name=circle["Event name"], outerboundaryis=polycircle.to_kml()
+                )
+                pol.style.polystyle.color = simplekml.Color.changealphaint(
+                    200, simplekml.Color.green
+                )
+
+                # kml.save(f"Circle {circle["Event name"]} kml")
 
         if len(polygons) != 0:
             for idx, polygon in polygon_list.iterrows():
@@ -157,8 +180,21 @@ while len(rawtext)!=0: # User input check
                     ),
                 ).add_to(AIO_map)
 
+            pol = kml.newpolygon(name=polygon["Event name"])
+            pol.outerboundaryis = polygon["Locations"]
+            pol.style.linestyle.color = simplekml.Color.green
+            pol.style.linestyle.width = 5
+            pol.style.polystyle.color = simplekml.Color.changealphaint(
+                200, simplekml.Color.green
+            )
+
         return AIO_map
 
     AIO_map = create_map()
 
-    st_image = st_folium(AIO_map,  width = 725)
+    st_image = st_folium(AIO_map, width=725)
+
+    file = kml.save("Circle.kml")
+    f = open("Circle.kml")
+
+    st.download_button("Download kml file", f, ".kml")
